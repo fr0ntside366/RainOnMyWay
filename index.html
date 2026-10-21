@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeedPedelec WeatherRoute</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --accent: #0284c7;
+            --accent-hover: #0369a1;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #38bdf8;
+        }
+
+        .logo-icon {
+            background: #0284c7;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .speed-badge {
+            background: #1e293b;
+            border: 1px solid #0284c7;
+            color: #38bdf8;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            flex: 1;
+            height: calc(100vh - 70px);
+        }
+
+        @media (max-width: 992px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            overflow-y: auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 0.35rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 0.75rem 0.75rem 0.75rem 2.25rem;
+            background: #0f172a;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 0.75rem;
+            color: var(--text-muted);
+            width: 18px;
+            height: 18px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.85rem;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .quick-routes {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            background: #0f172a;
+            border: 1px solid var(--card-border);
+            padding: 0.3rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .stat-box {
+            background: #0f172a;
+            padding: 0.85rem;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #38bdf8;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .weather-summary-box {
+            background: rgba(2, 132, 199, 0.1);
+            border: 1px solid rgba(2, 132, 199, 0.3);
+            border-radius: 8px;
+            padding: 0.85rem;
+            margin-top: 0.75rem;
+        }
+
+        .map-container {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+            min-height: 400px;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            padding: 0.85rem;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            z-index: 1000;
+            font-size: 0.8rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .timeline-container {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--card-border);
+            font-size: 0.85rem;
+        }
+
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: #1e293b;
+            color: white;
+            border: 1px solid #334155;
+            border-radius: 8px;
+        }
+
+        .custom-popup .leaflet-popup-tip {
+            background: #1e293b;
+        }
+
+        .popup-header {
+            font-weight: 700;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+            color: #38bdf8;
+        }
+
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 3px;
+            font-size: 0.85rem;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <div class="logo-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="5.5" cy="17.5" r="3.5"/>
+                    <circle cx="18.5" cy="17.5" r="3.5"/>
+                    <path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5l1.5-6 3 3 3-2"/>
+                    <path d="M9 17.5l2.5-6 3.5 1"/>
+                </svg>
+            </div>
+            SpeedPedelec WeatherRoute
+        </div>
+        <div class="speed-badge">⚡ Gem. 30 km/u op fietsnetwerk</div>
+    </header>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="card">
+                <div class="card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Route & Vertrektijd
+                </div>
+
+                <div class="form-group">
+                    <label>Startlocatie (Van)</label>
+                    <div class="input-wrapper">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+                        <input type="text" id="origin" value="Mechelen" placeholder="Bijv. Mechelen, Antwerpen...">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Bestemming (Naar)</label>
+                    <div class="input-wrapper">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
+                        <input type="text" id="destination" value="Ranst" placeholder="Bijv. Leuven, Gent...">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Vertrektijd</label>
+                    <div class="input-wrapper">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        <input type="datetime-local" id="departureTime">
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="calculateRoute()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                    Bereken Fietsroute & Weer
+                </button>
+
+                <div style="margin-top: 1rem;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Snelkeuzes:</span>
+                    <div class="quick-routes">
+                        <span class="chip" onclick="setQuickRoute('Gent', 'Brugge')">Gent → Brugge</span>
+                        <span class="chip" onclick="setQuickRoute('Leuven', 'Brussel')">Leuven → Brussel</span>
+                        <span class="chip" onclick="setQuickRoute('Hasselt', 'Genk')">Hasselt → Genk</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="summaryCard">
+                <div class="card-title">Route & Weersamenvatting</div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="totalDistance">-</div>
+                        <div class="stat-label">Totale Afstand</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="totalDuration">-</div>
+                        <div class="stat-label">Geschatte Reistijd</div>
+                    </div>
+                </div>
+
+                <div class="weather-summary-box" id="weatherSummary">
+                    <div style="font-size: 0.9rem; font-weight: 600;" id="summaryTitle">Voer een route in</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;" id="summaryDesc">Bereken de route om realtime neerslag en wind op je pad te zien.</div>
+                </div>
+            </div>
+
+            <div class="card" style="flex: 1;">
+                <div class="card-title">Tijdlijn per Controlepunt</div>
+                <div class="timeline-container" id="timelineList">
+                    <div style="text-align: center; color: var(--text-muted); padding: 1rem;">Nog geen route berekend.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            
+            <div class="loading-overlay" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: #38bdf8;">Fietsroute & Weermodel ophalen...</p>
+            </div>
+
+            <div class="legend">
+                <div style="font-weight: 600; margin-bottom: 0.5rem;">Legende</div>
+                <div class="legend-item"><div class="legend-color" style="background: #10b981;"></div> Goed weer / Droog</div>
+                <div class="legend-item"><div class="legend-color" style="background: #3b82f6;"></div> Lichte regen (&lt; 1mm/u)</div>
+                <div class="legend-item"><div class="legend-color" style="background: #1d4ed8;"></div> Matige/Zware regen</div>
+                <div class="legend-item"><div class="legend-color" style="background: #f59e0b;"></div> Matige/Harde wind (&gt;25 km/u)</div>
+                <div class="legend-item"><div class="legend-color" style="background: #ef4444;"></div> Tegenwind / Storm (&gt;40 km/u)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let routeLayerGroup;
+
+        // Vul standaard vertrektijd in (nu)
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('departureTime').value = now.toISOString().slice(0, 16);
+
+        // Initialiseer Leaflet Kaart
+        function initMap() {
+            map = L.map('map').setView([51.0259, 4.4776], 11); // Standaard op Mechelen
+
+            // CartoDB Voyager Tegels voor strakke en betrouwbare kaartweergave zonder API sleutel
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+
+            routeLayerGroup = L.layerGroup().addTo(map);
+        }
+
+        window.onload = initMap;
+
+        function setQuickRoute(from, to) {
+            document.getElementById('origin').value = from;
+            document.getElementById('destination').value = to;
+            calculateRoute();
+        }
+
+        async function geocode(locationName) {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}, Belgium`;
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data && data.length > 0) {
+                return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: data[0].display_name.split(',')[0] };
+            }
+            throw new Error(`Locatie '${locationName}' niet gevonden.`);
+        }
+
+        async function calculateRoute() {
+            const originStr = document.getElementById('origin').value;
+            const destStr = document.getElementById('destination').value;
+            const depTimeVal = document.getElementById('departureTime').value;
+
+            if (!originStr || !destStr || !depTimeVal) {
+                alert('Vul a.u.b. alle velden in.');
+                return;
+            }
+
+            document.getElementById('loading').classList.add('active');
+            routeLayerGroup.clearLayers();
+
+            try {
+                const originCoords = await geocode(originStr);
+                const destCoords = await geocode(destStr);
+
+                // OSRM Fietsroute ophalen met volledige geometrie
+                let routeData = null;
+                const osrmEndpoints = [
+                    `https://routing.openstreetmap.de/routed-bike/route/v1/driving/${originCoords.lon},${originCoords.lat};${destCoords.lon},${destCoords.lat}?overview=full&geometries=geojson`,
+                    `https://router.project-osrm.org/route/v1/biking/${originCoords.lon},${originCoords.lat};${destCoords.lon},${destCoords.lat}?overview=full&geometries=geojson`
+                ];
+
+                for (let ep of osrmEndpoints) {
+                    try {
+                        const res = await fetch(ep);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.routes && data.routes.length > 0) {
+                                routeData = data.routes[0];
+                                break;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Endpoint gefaald, volgende proberen...", e);
+                    }
+                }
+
+                let coordinates = [];
+                let distanceKm = 0;
+
+                if (routeData) {
+                    coordinates = routeData.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                    distanceKm = routeData.distance / 1000;
+                } else {
+                    // Fallback
+                    coordinates = [[originCoords.lat, originCoords.lon], [destCoords.lat, destCoords.lon]];
+                    distanceKm = calculateHaversine(originCoords.lat, originCoords.lon, destCoords.lat, destCoords.lon) * 1.3;
+                }
+
+                // Snelheid Speedpedelec: 30 km/u gemiddeld
+                const speedKmh = 30;
+                const totalDurationHours = distanceKm / speedKmh;
+                const totalDurationMinutes = Math.round(totalDurationHours * 60);
+
+                document.getElementById('totalDistance').innerText = `${distanceKm.toFixed(1)} km`;
+                document.getElementById('totalDuration').innerText = `${totalDurationMinutes} min`;
+
+                // Subsamplen van de route in controlepunten om de ~5km of ten minste 5 punten
+                const waypoints = extractWaypoints(coordinates, distanceKm, new Date(depTimeVal));
+
+                // Weer per controlepunt ophalen
+                await fetchWeatherDataForWaypoints(waypoints);
+
+                // Route tekenen op kaart & tildelijn opbouwen
+                renderRouteAndWeather(coordinates, waypoints);
+
+            } catch (err) {
+                alert("Er is een fout opgetreden: " + err.message);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+
+        function extractWaypoints(coordinates, totalDistanceKm, startTime) {
+            const waypoints = [];
+            const numPoints = Math.max(3, Math.min(8, Math.ceil(totalDistanceKm / 5)));
+            const step = Math.floor(coordinates.length / (numPoints - 1));
+
+            for (let i = 0; i < numPoints; i++) {
+                const idx = (i === numPoints - 1) ? coordinates.length - 1 : i * step;
+                const coord = coordinates[idx];
+                const progressRatio = idx / (coordinates.length - 1);
+                
+                // Bepaal geschatte aankomsttijd op dit specifieke punt
+                const pointTime = new Date(startTime.getTime() + (progressRatio * (totalDistanceKm / 30) * 3600 * 1000));
+
+                // Bereken koershoek van het fietsen voor windberekening (relatieve hoek)
+                let heading = 0;
+                if (idx < coordinates.length - 1) {
+                    heading = getBearing(coord[0], coord[1], coordinates[idx+1][0], coordinates[idx+1][1]);
+                }
+
+                waypoints.push({
+                    lat: coord[0],
+                    lon: coord[1],
+                    time: pointTime,
+                    distanceFromStartKm: totalDistanceKm * progressRatio,
+                    heading: heading
+                });
+            }
+            return waypoints;
+        }
+
+        async function fetchWeatherDataForWaypoints(waypoints) {
+            for (let wp of waypoints) {
+                const isoTime = wp.time.toISOString();
+                const dateStr = isoTime.split('T')[0];
+                const hour = wp.time.getHours();
+
+                const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${wp.lat}&longitude=${wp.lon}&hourly=temperature_2m,precipitation,windspeed_10m,winddirection_10m&start_date=${dateStr}&end_date=${dateStr}&timezone=auto`;
+                
+                try {
+                    const res = await fetch(weatherUrl);
+                    const data = await res.json();
+                    
+                    if (data && data.hourly) {
+                        wp.temp = data.hourly.temperature_2m[hour] || 15;
+                        wp.rain = data.hourly.precipitation[hour] || 0;
+                        wp.windSpeed = data.hourly.windspeed_10m[hour] || 10;
+                        wp.windDir = data.hourly.winddirection_10m[hour] || 0;
+                        
+                        // Bereken windrelatie (mee, tegen of zijwind)
+                        wp.windImpact = calculateWindImpact(wp.heading, wp.windDir, wp.windSpeed);
+                    }
+                } catch (e) {
+                    console.error("Fout bij ophalen weer:", e);
+                    wp.temp = 15; wp.rain = 0; wp.windSpeed = 10; wp.windImpact = 'neutraal';
+                }
+            }
+        }
+
+        function calculateWindImpact(heading, windDir, windSpeed) {
+            // Windrichting is de richting waar de wind VANDAAN komt
+            const relativeAngle = Math.abs((windDir - heading + 360) % 360);
+            
+            if (windSpeed < 15) return { type: 'Licht', desc: 'Weinig invloed', color: '#10b981' };
+
+            if (relativeAngle < 45 || relativeAngle > 315) {
+                return { type: 'Tegenwind', desc: `Tegenwind (${Math.round(windSpeed)} km/u)`, color: '#ef4444' };
+            } else if (relativeAngle >= 135 && relativeAngle <= 225) {
+                return { type: 'Meewind', desc: `Meewind (${Math.round(windSpeed)} km/u)`, color: '#10b981' };
+            } else {
+                return { type: 'Zijwind', desc: `Zijwind (${Math.round(windSpeed)} km/u)`, color: '#f59e0b' };
+            }
+        }
+
+        function renderRouteAndWeather(coordinates, waypoints) {
+            // 1. Teken de routelijn op de kaart
+            const polyline = L.polyline(coordinates, {
+                color: '#38bdf8',
+                weight: 5,
+                opacity: 0.8
+            }).addTo(routeLayerGroup);
+
+            map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+
+            // 2. Plaats markers en popups op elk controlepunt
+            const timelineList = document.getElementById('timelineList');
+            timelineList.innerHTML = '';
+
+            let maxRain = 0;
+            let maxWind = 0;
+
+            waypoints.forEach((wp, idx) => {
+                if (wp.rain > maxRain) maxRain = wp.rain;
+                if (wp.windSpeed > maxWind) maxWind = wp.windSpeed;
+
+                // Kies marker-kleur op basis van weer
+                let markerColor = '#10b981'; // groen
+                if (wp.rain > 1.0) markerColor = '#1d4ed8'; // zware regen
+                else if (wp.rain > 0) markerColor = '#3b82f6'; // lichte regen
+                else if (wp.windSpeed > 35 || (wp.windImpact && wp.windImpact.type === 'Tegenwind' && wp.windSpeed > 25)) markerColor = '#ef4444';
+                else if (wp.windSpeed > 25) markerColor = '#f59e0b';
+
+                // Cirkelmarker op kaart
+                const circleIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color:${markerColor}; width:18px; height:18px; border-radius:50%; border:3px solid white; box-shadow:0 0 8px rgba(0,0,0,0.5);"></div>`,
+                    iconSize: [18, 18],
+                    iconAnchor: [9, 9]
+                });
+
+                const marker = L.marker([wp.lat, wp.lon], { icon: circleIcon }).addTo(routeLayerGroup);
+
+                const timeStr = wp.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                const popupContent = `
+                    <div class="custom-popup">
+                        <div class="popup-header">Punt ${idx + 1} (${timeStr})</div>
+                        <div class="popup-row"><span>Afstand:</span> <strong>${wp.distanceFromStartKm.toFixed(1)} km</strong></div>
+                        <div class="popup-row"><span>Temperatuur:</span> <strong>${wp.temp}°C</strong></div>
+                        <div class="popup-row"><span>Neerslag:</span> <strong>${wp.rain} mm/u</strong></div>
+                        <div class="popup-row"><span>Wind:</span> <strong>${wp.windSpeed} km/u</strong></div>
+                        <div class="popup-row"><span>Effect:</span> <span style="color:${wp.windImpact.color}; font-weight:bold;">${wp.windImpact.type}</span></div>
+                    </div>
+                `;
+                marker.bindPopup(popupContent);
+
+                // Tijdlijn element toevoegen
+                const item = document.createElement('div');
+                item.className = 'timeline-item';
+                item.innerHTML = `
+                    <div>
+                        <strong style="color: #38bdf8;">${timeStr}</strong> 
+                        <span style="color: var(--text-muted); font-size: 0.75rem;">(${wp.distanceFromStartKm.toFixed(1)} km)</span>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                        <span>💧 ${wp.rain} mm</span>
+                        <span>💨 ${Math.round(wp.windSpeed)} km/u</span>
+                        <span style="color:${wp.windImpact.color}; font-size:0.75rem;">${wp.windImpact.type}</span>
+                    </div>
+                `;
+                timelineList.appendChild(item);
+            });
+
+            // Update samenvatting
+            const summaryTitle = document.getElementById('summaryTitle');
+            const summaryDesc = document.getElementById('summaryDesc');
+
+            if (maxRain > 0.5 && maxWind > 30) {
+                summaryTitle.innerHTML = '⚠️ Regen kledij & Extra batterij!';
+                summaryDesc.innerHTML = `Er wordt neerslag (${maxRain} mm/u) en stevige wind (${Math.round(maxWind)} km/u) verwachte. Pas je snelheid aan.`;
+            } else if (maxRain > 0) {
+                summaryTitle.innerHTML = '🌧️ Regenjas aanbevolen';
+                summaryDesc.innerHTML = `Lichte tot matige neerslag (${maxRain} mm/u) op onderdelen van het traject.`;
+            } else if (maxWind > 30) {
+                summaryTitle.innerHTML = '💨 Stevige wind onderweg';
+                summaryDesc.innerHTML = `Windstoten tot ${Math.round(maxWind)} km/u opgemerkt. Zorgt mogelijk voor hoger verbruik van je accu.`;
+            } else {
+                summaryTitle.innerHTML = '☀️ Uitstekend fietsweer';
+                summaryDesc.innerHTML = `Droog weer en milde windstoten tijdens de gehele rit op je speedpedelec!`;
+            }
+        }
+
+        // Hulpmethoden
+        function calculateHaversine(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function getBearing(lat1, lon1, lat2, lon2) {
+            const y = Math.sin((lon2 - lon1) * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180);
+            const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+                      Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos((lon2 - lon1) * Math.PI / 180);
+            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        }
+    </script>
+</body>
+</html>
