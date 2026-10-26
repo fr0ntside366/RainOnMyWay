@@ -496,6 +496,7 @@
         }
 
         .timeline-container {
+            padding-right: 0.75rem;
             overflow: visible;
         }
 
@@ -565,6 +566,38 @@
                 grid-column: 2 / -1;
                 justify-self: end;
                 font-size: 0.68rem;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .timeline-container {
+                padding-right: 0.9rem;
+            }
+
+            .timeline-item {
+                grid-template-columns: minmax(0, 1fr) auto auto;
+                column-gap: 0.25rem;
+                row-gap: 0.15rem;
+                padding: 0.35rem 0;
+                font-size: 0.66rem;
+            }
+
+            .timeline-distance {
+                font-size: 0.62rem;
+            }
+
+            .timeline-rain,
+            .timeline-wind {
+                font-size: 0.66rem;
+            }
+
+            .timeline-impact {
+                grid-column: 2 / -1;
+                justify-self: end;
+                max-width: 100%;
+                white-space: normal;
+                text-align: right;
+                font-size: 0.62rem;
             }
         }
 
