@@ -4,9 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://tile.openstreetmap.org https://imn-rust-lb.infoplaza.io https://maps.meteoplaza.com; connect-src 'self' https://photon.komoot.io https://nominatim.openstreetmap.org https://routing.openstreetmap.de https://router.project-osrm.org https://api.open-meteo.com https://imn-rust-lb.infoplaza.io; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>SpeedPedelec WeatherRoute</title>
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -556,9 +558,66 @@
         }
 
         @media (max-width: 600px) {
+            header {
+                padding: 0.75rem 1rem;
+            }
+
+            .logo {
+                gap: 0.5rem;
+                font-size: 1rem;
+            }
+
+            .main-container {
+                gap: 0.75rem;
+                padding: 0.75rem;
+            }
+
+            .card {
+                padding: 1rem;
+            }
+
+            .card-title {
+                margin-bottom: 0.8rem;
+                font-size: 1.05rem;
+            }
+
+            .form-group label {
+                font-size: 0.9rem;
+            }
+
+            .input-wrapper input {
+                min-height: 48px;
+                font-size: 1rem;
+            }
+
+            .btn-primary,
+            .btn-secondary,
+            .chip {
+                min-height: 44px;
+            }
+
+            .autocomplete-option,
+            .saved-route-load,
+            .saved-route-delete {
+                min-height: 44px;
+            }
+
+            .chip {
+                display: inline-flex;
+                align-items: center;
+                padding: 0.4rem 0.75rem;
+                font-size: 0.85rem;
+            }
+
+            .route-edit-button {
+                min-height: 46px;
+                font-size: 0.9rem;
+            }
+
             .route-edit-controls {
                 top: auto;
                 bottom: 16px;
+                left: 56px;
             }
 
             .legend {
@@ -648,19 +707,26 @@
 
             .timeline-item {
                 grid-template-columns: minmax(0, 1fr) auto auto;
-                column-gap: 0.25rem;
-                row-gap: 0.15rem;
-                padding: 0.35rem 0;
-                font-size: 0.66rem;
+                column-gap: 0.35rem;
+                row-gap: 0.25rem;
+                padding: 0.5rem 0;
+                font-size: 0.85rem;
+            }
+
+            .timeline-time {
+                display: flex;
+                flex-direction: column;
+                gap: 0.1rem;
+                white-space: normal;
             }
 
             .timeline-distance {
-                font-size: 0.62rem;
+                font-size: 0.72rem;
             }
 
             .timeline-rain,
             .timeline-wind {
-                font-size: 0.66rem;
+                font-size: 0.8rem;
             }
 
             .timeline-impact {
@@ -669,7 +735,7 @@
                 max-width: 100%;
                 white-space: normal;
                 text-align: right;
-                font-size: 0.62rem;
+                font-size: 0.75rem;
             }
         }
 
@@ -793,12 +859,12 @@
                     </div>
                 </div>
 
-                <button class="btn-primary" onclick="calculateRoute()">
+                <button class="btn-primary" id="calculateRouteButton" type="button">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
                     Bereken Fietsroute & Weer
                 </button>
 
-                <button class="btn-secondary" type="button" onclick="saveCurrentRoute()">
+                <button class="btn-secondary" id="saveRouteButton" type="button">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
                     Bewaar deze route
                 </button>
@@ -812,9 +878,9 @@
                 <div style="margin-top: 1rem;">
                     <span style="font-size: 0.75rem; color: var(--text-muted);">Snelkeuzes:</span>
                     <div class="quick-routes">
-                        <span class="chip" onclick="setQuickRoute('Gent', 'Brugge')">Gent → Brugge</span>
-                        <span class="chip" onclick="setQuickRoute('Leuven', 'Brussel')">Leuven → Brussel</span>
-                        <span class="chip" onclick="setQuickRoute('Hasselt', 'Genk')">Hasselt → Genk</span>
+                        <button class="chip" type="button" data-origin="Gent" data-destination="Brugge">Gent → Brugge</button>
+                        <button class="chip" type="button" data-origin="Leuven" data-destination="Brussel">Leuven → Brussel</button>
+                        <button class="chip" type="button" data-origin="Hasselt" data-destination="Genk">Hasselt → Genk</button>
                     </div>
                 </div>
             </div>
@@ -850,11 +916,11 @@
             <div id="map"></div>
 
             <div class="route-edit-controls">
-                <button class="route-edit-button" id="editRouteButton" type="button" onclick="toggleRouteEdit()" aria-pressed="false" disabled>
+                <button class="route-edit-button" id="editRouteButton" type="button" aria-pressed="false" disabled>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
                     <span>Route aanpassen</span>
                 </button>
-                <button class="route-edit-button" id="clearRoutePointsButton" type="button" onclick="clearRoutePoints()" hidden>
+                <button class="route-edit-button" id="clearRoutePointsButton" type="button" hidden>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2m3 0-1 14H6L5 6"/></svg>
                     <span>Wis punten</span>
                 </button>
@@ -887,7 +953,7 @@
     </div>
 
     <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
         let map;
         let routeLayerGroup;
@@ -921,6 +987,14 @@
         }
 
         window.onload = initMap;
+
+        document.getElementById('calculateRouteButton').addEventListener('click', calculateRoute);
+        document.getElementById('saveRouteButton').addEventListener('click', saveCurrentRoute);
+        document.getElementById('editRouteButton').addEventListener('click', toggleRouteEdit);
+        document.getElementById('clearRoutePointsButton').addEventListener('click', clearRoutePoints);
+        document.querySelectorAll('.quick-routes .chip').forEach(button => {
+            button.addEventListener('click', () => setQuickRoute(button.dataset.origin, button.dataset.destination));
+        });
 
         const selectedLocations = new WeakMap();
         const savedRoutesStorageKey = 'speedPedelecWeatherRoute.savedRoutes';
@@ -968,7 +1042,19 @@
                 deleteButton.className = 'saved-route-delete';
                 deleteButton.setAttribute('aria-label', `Verwijder ${route.name || 'opgeslagen route'}`);
                 deleteButton.title = 'Verwijder route';
-                deleteButton.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2m3 2-1 13H6L5 6"/></svg>';
+                const deleteIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                deleteIcon.setAttribute('width', '16');
+                deleteIcon.setAttribute('height', '16');
+                deleteIcon.setAttribute('viewBox', '0 0 24 24');
+                deleteIcon.setAttribute('fill', 'none');
+                deleteIcon.setAttribute('stroke', 'currentColor');
+                deleteIcon.setAttribute('stroke-width', '2');
+                [['M3 6h18'], ['M8 6V4h8v2m3 2-1 13H6L5 6']].forEach(([pathData]) => {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', pathData);
+                    deleteIcon.appendChild(path);
+                });
+                deleteButton.appendChild(deleteIcon);
                 deleteButton.addEventListener('click', () => deleteSavedRoute(route.id));
 
                 entry.append(loadButton, deleteButton);
@@ -1536,10 +1622,10 @@
                     const data = await res.json();
                     
                     if (data && data.hourly) {
-                        wp.temp = data.hourly.temperature_2m[hour] || 15;
-                        wp.rain = data.hourly.precipitation[hour] || 0;
-                        wp.windSpeed = data.hourly.windspeed_10m[hour] ?? 10;
-                        wp.windDir = data.hourly.winddirection_10m[hour] ?? 0;
+                        wp.temp = finiteWeatherNumber(data.hourly.temperature_2m[hour], 15);
+                        wp.rain = finiteWeatherNumber(data.hourly.precipitation[hour], 0);
+                        wp.windSpeed = finiteWeatherNumber(data.hourly.windspeed_10m[hour], 10);
+                        wp.windDir = ((finiteWeatherNumber(data.hourly.winddirection_10m[hour], 0) % 360) + 360) % 360;
                         
                         // Bereken windrelatie (mee, tegen of zijwind)
                         wp.windImpact = calculateWindImpact(wp.heading, wp.windDir, wp.windSpeed);
@@ -1559,6 +1645,11 @@
                     wp.rainSource = 'Buienalarm';
                 }
             }
+        }
+
+        function finiteWeatherNumber(value, fallback) {
+            const number = Number(value);
+            return Number.isFinite(number) ? number : fallback;
         }
 
         async function fetchBuienalarmRainfall(waypoint) {
@@ -1623,7 +1714,7 @@
 
             // 2. Plaats markers en popups op elk controlepunt
             const timelineList = document.getElementById('timelineList');
-            timelineList.innerHTML = '';
+            timelineList.replaceChildren();
 
             let maxRain = 0;
             let maxWind = 0;
@@ -1666,30 +1757,65 @@
 
                 const timeStr = wp.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-                const popupContent = `
-                    <div class="custom-popup">
-                        <div class="popup-header">Punt ${idx + 1} (${timeStr})</div>
-                        <div class="popup-row"><span>Afstand:</span> <strong>${wp.distanceFromStartKm.toFixed(1)} km</strong></div>
-                        <div class="popup-row"><span>Temperatuur:</span> <strong>${wp.temp}°C</strong></div>
-                        <div class="popup-row"><span>Neerslag:</span> <strong>${wp.rain} mm/u</strong> <small>${wp.rainSource}</small></div>
-                        <div class="popup-row"><span>Wind:</span> <strong>${wp.windSpeed} km/u</strong></div>
-                        <div class="popup-row"><span>Effect:</span> <span style="color:${wp.windImpact.color}; font-weight:bold;">${wp.windImpact.type}</span></div>
-                    </div>
-                `;
+                const popupContent = document.createElement('div');
+                popupContent.className = 'custom-popup';
+                const popupHeader = document.createElement('div');
+                popupHeader.className = 'popup-header';
+                popupHeader.textContent = `Punt ${idx + 1} (${timeStr})`;
+                popupContent.appendChild(popupHeader);
+
+                const popupRows = [
+                    ['Afstand:', `${wp.distanceFromStartKm.toFixed(1)} km`],
+                    ['Temperatuur:', `${wp.temp}°C`],
+                    ['Neerslag:', `${wp.rain} mm/u (${wp.rainSource})`],
+                    ['Wind:', `${wp.windSpeed} km/u`]
+                ];
+                popupRows.forEach(([label, value]) => {
+                    const row = document.createElement('div');
+                    row.className = 'popup-row';
+                    const labelElement = document.createElement('span');
+                    labelElement.textContent = label;
+                    const valueElement = document.createElement('strong');
+                    valueElement.textContent = value;
+                    row.append(labelElement, valueElement);
+                    popupContent.appendChild(row);
+                });
+
+                const effectRow = document.createElement('div');
+                effectRow.className = 'popup-row';
+                const effectLabel = document.createElement('span');
+                effectLabel.textContent = 'Effect:';
+                const effectValue = document.createElement('span');
+                effectValue.textContent = wp.windImpact.type;
+                effectValue.style.color = wp.windImpact.color;
+                effectValue.style.fontWeight = 'bold';
+                effectRow.append(effectLabel, effectValue);
+                popupContent.appendChild(effectRow);
                 marker.bindPopup(popupContent);
 
                 // Tijdlijn element toevoegen
                 const item = document.createElement('div');
                 item.className = 'timeline-item';
-                item.innerHTML = `
-                    <div class="timeline-time">
-                        <strong>${timeStr}</strong>
-                        <span class="timeline-distance">(${wp.distanceFromStartKm.toFixed(1)} km)</span>
-                    </div>
-                    <span class="timeline-rain">💧 ${wp.rain} mm</span>
-                    <span class="timeline-wind">💨 ${Math.round(wp.windSpeed)} km/u</span>
-                    <span class="timeline-impact" style="color:${wp.windImpact.color};">${wp.windImpact.type}</span>
-                `;
+                const timeElement = document.createElement('div');
+                timeElement.className = 'timeline-time';
+                const timeValue = document.createElement('strong');
+                timeValue.textContent = timeStr;
+                const distanceValue = document.createElement('span');
+                distanceValue.className = 'timeline-distance';
+                distanceValue.textContent = `(${wp.distanceFromStartKm.toFixed(1)} km)`;
+                timeElement.append(timeValue, distanceValue);
+
+                const rainValue = document.createElement('span');
+                rainValue.className = 'timeline-rain';
+                rainValue.textContent = `💧 ${wp.rain} mm`;
+                const windValue = document.createElement('span');
+                windValue.className = 'timeline-wind';
+                windValue.textContent = `💨 ${Math.round(wp.windSpeed)} km/u`;
+                const impactValue = document.createElement('span');
+                impactValue.className = 'timeline-impact';
+                impactValue.textContent = wp.windImpact.type;
+                impactValue.style.color = wp.windImpact.color;
+                item.append(timeElement, rainValue, windValue, impactValue);
                 timelineList.appendChild(item);
             });
 
@@ -1698,17 +1824,17 @@
             const summaryDesc = document.getElementById('summaryDesc');
 
             if (maxRain > 0.5 && maxWind > 30) {
-                summaryTitle.innerHTML = '⚠️ Regen kledij & Extra batterij!';
-                summaryDesc.innerHTML = `Er wordt neerslag (${maxRain} mm/u) en stevige wind (${Math.round(maxWind)} km/u) verwachte. Pas je snelheid aan.`;
+                summaryTitle.textContent = '⚠️ Regenkledij en extra batterij!';
+                summaryDesc.textContent = `Er wordt neerslag (${maxRain} mm/u) en stevige wind (${Math.round(maxWind)} km/u) verwacht. Pas je snelheid aan.`;
             } else if (maxRain > 0) {
-                summaryTitle.innerHTML = '🌧️ Regenjas aanbevolen';
-                summaryDesc.innerHTML = `Lichte tot matige neerslag (${maxRain} mm/u) op onderdelen van het traject.`;
+                summaryTitle.textContent = '🌧️ Regenjas aanbevolen';
+                summaryDesc.textContent = `Lichte tot matige neerslag (${maxRain} mm/u) op delen van het traject.`;
             } else if (maxWind > 30) {
-                summaryTitle.innerHTML = '💨 Stevige wind onderweg';
-                summaryDesc.innerHTML = `Windstoten tot ${Math.round(maxWind)} km/u opgemerkt. Zorgt mogelijk voor hoger verbruik van je accu.`;
+                summaryTitle.textContent = '💨 Stevige wind onderweg';
+                summaryDesc.textContent = `Windstoten tot ${Math.round(maxWind)} km/u opgemerkt. Dit zorgt mogelijk voor hoger accuverbruik.`;
             } else {
-                summaryTitle.innerHTML = '☀️ Uitstekend fietsweer';
-                summaryDesc.innerHTML = `Droog weer en milde windstoten tijdens de gehele rit op je speedpedelec!`;
+                summaryTitle.textContent = '☀️ Uitstekend fietsweer';
+                summaryDesc.textContent = 'Droog weer en milde wind tijdens de hele rit.';
             }
         }
 
