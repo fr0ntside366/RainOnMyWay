@@ -489,6 +489,14 @@
             margin-bottom: 0.35rem;
         }
 
+        .weather-source-note {
+            max-width: 220px;
+            margin-bottom: 0.45rem;
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            line-height: 1.35;
+        }
+
         .legend-color {
             width: 12px;
             height: 12px;
@@ -853,6 +861,7 @@
 
             <div class="legend">
                 <div style="font-weight: 600; margin-bottom: 0.5rem;">Legende</div>
+                <div class="weather-source-note">Neerslag: Buienalarm-nowcast; verder Open-Meteo best match.</div>
                 <div class="legend-item"><div class="legend-color" style="background: #10b981;"></div> Goed weer / Droog</div>
                 <div class="legend-item"><div class="legend-color" style="background: #3b82f6;"></div> Lichte regen (&lt; 1mm/u)</div>
                 <div class="legend-item"><div class="legend-color" style="background: #1d4ed8;"></div> Matige/Zware regen</div>
@@ -1489,6 +1498,7 @@
 
         async function fetchWeatherDataForWaypoints(waypoints) {
             for (let wp of waypoints) {
+                wp.rainSource = 'Open-Meteo';
                 const isoTime = wp.time.toISOString();
                 const dateStr = isoTime.split('T')[0];
                 const hour = wp.time.getHours();
@@ -1516,6 +1526,40 @@
                     wp.windDir = 0;
                     wp.windImpact = calculateWindImpact(wp.heading, wp.windDir, wp.windSpeed);
                 }
+
+                const shortTermRain = await fetchBuienalarmRainfall(wp);
+                if (shortTermRain !== null) {
+                    wp.rain = shortTermRain;
+                    wp.rainSource = 'Buienalarm';
+                }
+            }
+        }
+
+        async function fetchBuienalarmRainfall(waypoint) {
+            const targetTime = waypoint.time.getTime();
+            const now = Date.now();
+            if (targetTime < now - 150000 || targetTime > now + 2.1 * 60 * 60 * 1000) return null;
+
+            const url = `https://imn-rust-lb.infoplaza.io/v4/nowcast/timeseries/${waypoint.lat}/${waypoint.lon}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) return null;
+
+                const result = await response.json();
+                if (!Array.isArray(result.data) || result.data.length === 0) return null;
+
+                const nearest = result.data.reduce((closest, sample) => {
+                    const distance = Math.abs(new Date(sample.time).getTime() - targetTime);
+                    return distance < closest.distance ? { sample, distance } : closest;
+                }, { sample: null, distance: Infinity });
+
+                return nearest.sample && nearest.distance <= 150000 && Number.isFinite(nearest.sample.precipitationrate)
+                    ? nearest.sample.precipitationrate
+                    : null;
+            } catch (error) {
+                console.warn('Buienalarm-nowcast niet beschikbaar; Open-Meteo wordt gebruikt.', error);
+                return null;
             }
         }
 
@@ -1601,7 +1645,7 @@
                         <div class="popup-header">Punt ${idx + 1} (${timeStr})</div>
                         <div class="popup-row"><span>Afstand:</span> <strong>${wp.distanceFromStartKm.toFixed(1)} km</strong></div>
                         <div class="popup-row"><span>Temperatuur:</span> <strong>${wp.temp}°C</strong></div>
-                        <div class="popup-row"><span>Neerslag:</span> <strong>${wp.rain} mm/u</strong></div>
+                        <div class="popup-row"><span>Neerslag:</span> <strong>${wp.rain} mm/u</strong> <small>${wp.rainSource}</small></div>
                         <div class="popup-row"><span>Wind:</span> <strong>${wp.windSpeed} km/u</strong></div>
                         <div class="popup-row"><span>Effect:</span> <span style="color:${wp.windImpact.color}; font-weight:bold;">${wp.windImpact.type}</span></div>
                     </div>
