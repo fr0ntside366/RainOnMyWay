@@ -496,21 +496,76 @@
         }
 
         .timeline-container {
-            max-height: 250px;
-            overflow-y: auto;
+            overflow: visible;
         }
 
         .timeline-item {
-            display: flex;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto auto;
             align-items: center;
-            justify-content: space-between;
-            padding: 0.6rem 0;
+            gap: 0.45rem;
+            padding: 0.5rem 0;
             border-bottom: 1px solid var(--card-border);
-            font-size: 0.85rem;
+            font-size: 0.78rem;
         }
 
         .timeline-item:last-child {
             border-bottom: none;
+        }
+
+        .timeline-time,
+        .timeline-rain,
+        .timeline-wind,
+        .timeline-impact {
+            min-width: 0;
+            white-space: nowrap;
+        }
+
+        .timeline-time strong {
+            color: #38bdf8;
+        }
+
+        .timeline-distance {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+        }
+
+        @media (max-width: 992px) {
+            .sidebar {
+                overflow: visible;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-container {
+                gap: 0.75rem;
+                padding: 0.75rem;
+            }
+
+            .card {
+                padding: 0.9rem;
+            }
+
+            .card-title {
+                font-size: 1rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .timeline-item {
+                grid-template-columns: minmax(0, 1fr) auto auto;
+                gap: 0.3rem;
+                font-size: 0.72rem;
+            }
+
+            .timeline-distance {
+                font-size: 0.68rem;
+            }
+
+            .timeline-impact {
+                grid-column: 2 / -1;
+                justify-self: end;
+                font-size: 0.68rem;
+            }
         }
 
         .custom-popup .leaflet-popup-content-wrapper {
@@ -1426,15 +1481,13 @@
                 const item = document.createElement('div');
                 item.className = 'timeline-item';
                 item.innerHTML = `
-                    <div>
-                        <strong style="color: #38bdf8;">${timeStr}</strong> 
-                        <span style="color: var(--text-muted); font-size: 0.75rem;">(${wp.distanceFromStartKm.toFixed(1)} km)</span>
+                    <div class="timeline-time">
+                        <strong>${timeStr}</strong>
+                        <span class="timeline-distance">(${wp.distanceFromStartKm.toFixed(1)} km)</span>
                     </div>
-                    <div style="display: flex; gap: 0.75rem; align-items: center;">
-                        <span>💧 ${wp.rain} mm</span>
-                        <span>💨 ${Math.round(wp.windSpeed)} km/u</span>
-                        <span style="color:${wp.windImpact.color}; font-size:0.75rem;">${wp.windImpact.type}</span>
-                    </div>
+                    <span class="timeline-rain">💧 ${wp.rain} mm</span>
+                    <span class="timeline-wind">💨 ${Math.round(wp.windSpeed)} km/u</span>
+                    <span class="timeline-impact" style="color:${wp.windImpact.color};">${wp.windImpact.type}</span>
                 `;
                 timelineList.appendChild(item);
             });
