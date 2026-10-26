@@ -495,6 +495,58 @@
             border-radius: 50%;
         }
 
+        .wind-legend-arrow {
+            width: 16px;
+            height: 16px;
+            color: #facc15;
+            flex: 0 0 auto;
+        }
+
+        .wind-legend-scale {
+            display: grid;
+            grid-template-columns: repeat(2, max-content);
+            gap: 0.3rem 0.65rem;
+            margin: 0.15rem 0 0.35rem 1.4rem;
+            font-size: 0.72rem;
+        }
+
+        .wind-legend-level {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            white-space: nowrap;
+        }
+
+        .wind-legend-swatch {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+        }
+
+        .wind-direction-icon {
+            border: 0;
+            background: transparent;
+        }
+
+        .wind-direction-arrow {
+            display: grid;
+            width: 28px;
+            height: 28px;
+            place-items: center;
+            border: 2px solid white;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.95);
+            color: var(--wind-color);
+            box-shadow: 0 2px 7px rgba(0, 0, 0, 0.55);
+        }
+
+        .wind-direction-arrow svg {
+            width: 19px;
+            height: 19px;
+            overflow: visible;
+            transform: rotate(var(--wind-angle));
+        }
+
         @media (max-width: 600px) {
             .route-edit-controls {
                 top: auto;
@@ -804,8 +856,16 @@
                 <div class="legend-item"><div class="legend-color" style="background: #10b981;"></div> Goed weer / Droog</div>
                 <div class="legend-item"><div class="legend-color" style="background: #3b82f6;"></div> Lichte regen (&lt; 1mm/u)</div>
                 <div class="legend-item"><div class="legend-color" style="background: #1d4ed8;"></div> Matige/Zware regen</div>
-                <div class="legend-item"><div class="legend-color" style="background: #f59e0b;"></div> Matige/Harde wind (&gt;25 km/u)</div>
-                <div class="legend-item"><div class="legend-color" style="background: #ef4444;"></div> Tegenwind / Storm (&gt;40 km/u)</div>
+                <div class="legend-item">
+                    <svg class="wind-legend-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V4m-7 7 7-7 7 7"/></svg>
+                    Windrichting waarin de wind blaast
+                </div>
+                <div class="wind-legend-scale">
+                    <div class="wind-legend-level"><span class="wind-legend-swatch" style="background:#10b981;"></span>&lt;15 km/u</div>
+                    <div class="wind-legend-level"><span class="wind-legend-swatch" style="background:#facc15;"></span>15-24 km/u</div>
+                    <div class="wind-legend-level"><span class="wind-legend-swatch" style="background:#f97316;"></span>25-39 km/u</div>
+                    <div class="wind-legend-level"><span class="wind-legend-swatch" style="background:#ef4444;"></span>40+ km/u</div>
+                </div>
             </div>
         </div>
     </div>
@@ -1442,17 +1502,28 @@
                     if (data && data.hourly) {
                         wp.temp = data.hourly.temperature_2m[hour] || 15;
                         wp.rain = data.hourly.precipitation[hour] || 0;
-                        wp.windSpeed = data.hourly.windspeed_10m[hour] || 10;
-                        wp.windDir = data.hourly.winddirection_10m[hour] || 0;
+                        wp.windSpeed = data.hourly.windspeed_10m[hour] ?? 10;
+                        wp.windDir = data.hourly.winddirection_10m[hour] ?? 0;
                         
                         // Bereken windrelatie (mee, tegen of zijwind)
                         wp.windImpact = calculateWindImpact(wp.heading, wp.windDir, wp.windSpeed);
                     }
                 } catch (e) {
                     console.error("Fout bij ophalen weer:", e);
-                    wp.temp = 15; wp.rain = 0; wp.windSpeed = 10; wp.windImpact = 'neutraal';
+                    wp.temp = 15;
+                    wp.rain = 0;
+                    wp.windSpeed = 10;
+                    wp.windDir = 0;
+                    wp.windImpact = calculateWindImpact(wp.heading, wp.windDir, wp.windSpeed);
                 }
             }
+        }
+
+        function getWindArrowColor(windSpeed) {
+            if (windSpeed < 15) return '#10b981';
+            if (windSpeed < 25) return '#facc15';
+            if (windSpeed < 40) return '#f97316';
+            return '#ef4444';
         }
 
         function calculateWindImpact(heading, windDir, windSpeed) {
@@ -1507,6 +1578,21 @@
                 });
 
                 const marker = L.marker([wp.lat, wp.lon], { icon: circleIcon }).addTo(routeLayerGroup);
+
+                const windFromDirection = Number.isFinite(wp.windDir) ? wp.windDir : 0;
+                const windToDirection = (windFromDirection + 180) % 360;
+                const windArrowColor = getWindArrowColor(wp.windSpeed || 0);
+                const windArrowIcon = L.divIcon({
+                    className: 'wind-direction-icon',
+                    html: `<div class="wind-direction-arrow" style="--wind-color:${windArrowColor}; --wind-angle:${windToDirection}deg" title="Wind blaast naar ${windToDirection}°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V4m-7 7 7-7 7 7"/></svg></div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [-8, 14]
+                });
+                L.marker([wp.lat, wp.lon], {
+                    icon: windArrowIcon,
+                    interactive: false,
+                    zIndexOffset: 200
+                }).addTo(routeLayerGroup);
 
                 const timeStr = wp.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
