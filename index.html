@@ -430,6 +430,12 @@
             display: none;
         }
 
+        .route-edit-point-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
         .route-edit-hint {
             flex-basis: 100%;
             max-width: 310px;
@@ -927,10 +933,16 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
                     <span>Route aanpassen</span>
                 </button>
-                <button class="route-edit-button" id="clearRoutePointsButton" type="button" hidden>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2m3 0-1 14H6L5 6"/></svg>
-                    <span>Wis punten</span>
-                </button>
+                <div class="route-edit-point-actions">
+                    <button class="route-edit-button" id="clearRoutePointsButton" type="button" hidden>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2m3 0-1 14H6L5 6"/></svg>
+                        <span>Wis punten</span>
+                    </button>
+                    <button class="route-edit-button" id="removeLastRoutePointButton" type="button" hidden>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+                        <span>Verwijder laatste punt</span>
+                    </button>
+                </div>
                 <div class="route-edit-hint" id="routeEditHint" role="status" hidden></div>
             </div>
             
@@ -999,6 +1011,7 @@
         document.getElementById('saveRouteButton').addEventListener('click', saveCurrentRoute);
         document.getElementById('editRouteButton').addEventListener('click', toggleRouteEdit);
         document.getElementById('clearRoutePointsButton').addEventListener('click', clearRoutePoints);
+        document.getElementById('removeLastRoutePointButton').addEventListener('click', removeLastRoutePoint);
         document.querySelectorAll('.quick-routes .chip').forEach(button => {
             button.addEventListener('click', () => setQuickRoute(button.dataset.origin, button.dataset.destination));
         });
@@ -1096,7 +1109,11 @@
                 speedKmh,
                 originLocation: selectedLocations.get(originInput) || null,
                 destinationLocation: selectedLocations.get(destinationInput) || null,
-                shapePoints: routeIsReady ? routeShapePoints.map(point => ({ lat: point.lat, lon: point.lon })) : [],
+                shapePoints: routeIsReady ? routeShapePoints.map(point => ({
+                    lat: point.lat,
+                    lon: point.lon,
+                    ...(Number.isFinite(point.customOrder) ? { customOrder: point.customOrder } : {})
+                })) : [],
                 shapePointsInitialized: routeIsReady && routePointsInitialized
             };
             const sameEndpoints = savedRoutes.filter(savedRoute =>
@@ -1340,6 +1357,7 @@
         function updateRouteEditControls() {
             document.getElementById('editRouteButton').disabled = !routeIsReady;
             document.getElementById('clearRoutePointsButton').hidden = !routeEditMode || routeShapePoints.length === 0;
+            document.getElementById('removeLastRoutePointButton').hidden = !routeEditMode || !routeShapePoints.some(point => Number.isFinite(point.customOrder));
             document.getElementById('routeEditHint').textContent = routeShapePoints.length >= 10
                 ? 'Klik op een fietspad om een routepunt toe te voegen. Sleep de oranje punten om de route te sturen. Maximaal 10 routepunten.'
                 : 'Klik op fietspaden om routepunten toe te voegen. Sleep de oranje punten om de route via die paden te sturen.';
@@ -1402,8 +1420,21 @@
                 return;
             }
 
-            routeShapePoints.push({ lat: event.latlng.lat, lon: event.latlng.lng });
+            const customOrder = Math.max(0, ...routeShapePoints.map(point => point.customOrder || 0)) + 1;
+            routeShapePoints.push({ lat: event.latlng.lat, lon: event.latlng.lng, customOrder });
             orderRouteShapePoints(currentRouteCoordinates);
+            renderRouteShapePoints();
+            calculateRoute();
+        }
+
+        function removeLastRoutePoint() {
+            const lastCustomPoint = routeShapePoints.reduce((lastPoint, point) =>
+                Number.isFinite(point.customOrder) && (!lastPoint || point.customOrder > lastPoint.customOrder) ? point : lastPoint,
+                null
+            );
+            if (!lastCustomPoint) return;
+
+            routeShapePoints = routeShapePoints.filter(point => point !== lastCustomPoint);
             renderRouteShapePoints();
             calculateRoute();
         }
@@ -1515,9 +1546,10 @@
                     coordinates = routeData.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                     distanceKm = routeData.distance / 1000;
                     if (snappedWaypoints && snappedWaypoints.length === routeLocations.length) {
-                        routeShapePoints = snappedWaypoints.slice(1, -1).map(waypoint => ({
+                        routeShapePoints = snappedWaypoints.slice(1, -1).map((waypoint, index) => ({
                             lat: waypoint.location[1],
-                            lon: waypoint.location[0]
+                            lon: waypoint.location[0],
+                            ...(Number.isFinite(routeShapePoints[index]?.customOrder) ? { customOrder: routeShapePoints[index].customOrder } : {})
                         }));
                     }
                 } else {
