@@ -391,7 +391,7 @@
                     <label>Startlocatie (Van)</label>
                     <div class="input-wrapper">
                         <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-                        <input type="text" id="origin" value="Mechelen" placeholder="Bijv. Mechelen, Antwerpen...">
+                        <input type="text" id="origin" value="Mechelen" placeholder="Straat + huisnummer, gemeente">
                     </div>
                 </div>
 
@@ -399,7 +399,7 @@
                     <label>Bestemming (Naar)</label>
                     <div class="input-wrapper">
                         <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
-                        <input type="text" id="destination" value="Ranst" placeholder="Bijv. Leuven, Gent...">
+                        <input type="text" id="destination" value="Ranst" placeholder="Straat + huisnummer, gemeente">
                     </div>
                 </div>
 
@@ -505,7 +505,14 @@
         }
 
         async function geocode(locationName) {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}, Belgium`;
+            const params = new URLSearchParams({
+                format: 'json',
+                q: `${locationName}, Belgium`,
+                countrycodes: 'be',
+                addressdetails: '1',
+                limit: '1'
+            });
+            const url = `https://nominatim.openstreetmap.org/search?${params}`;
             const res = await fetch(url);
             const data = await res.json();
             if (data && data.length > 0) {
