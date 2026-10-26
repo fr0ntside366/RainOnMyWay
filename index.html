@@ -156,6 +156,52 @@
             box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
         }
 
+        .autocomplete-list {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            z-index: 1500;
+            max-height: 240px;
+            overflow-y: auto;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+        }
+
+        .autocomplete-list[hidden] {
+            display: none;
+        }
+
+        .autocomplete-option {
+            display: block;
+            width: 100%;
+            padding: 0.7rem 0.8rem;
+            border: 0;
+            border-bottom: 1px solid var(--card-border);
+            background: transparent;
+            color: var(--text-main);
+            text-align: left;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .autocomplete-option:last-child {
+            border-bottom: 0;
+        }
+
+        .autocomplete-option:hover,
+        .autocomplete-option[aria-selected="true"] {
+            background: rgba(2, 132, 199, 0.2);
+        }
+
+        .autocomplete-message {
+            padding: 0.7rem 0.8rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
         .input-icon {
             position: absolute;
             left: 0.75rem;
@@ -391,7 +437,8 @@
                     <label>Startlocatie (Van)</label>
                     <div class="input-wrapper">
                         <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-                        <input type="text" id="origin" value="Mechelen" placeholder="Straat + huisnummer, gemeente">
+                        <input type="text" id="origin" value="Mechelen" placeholder="Straat + huisnummer, gemeente" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="originSuggestions">
+                        <div class="autocomplete-list" id="originSuggestions" role="listbox" hidden></div>
                     </div>
                 </div>
 
@@ -399,7 +446,8 @@
                     <label>Bestemming (Naar)</label>
                     <div class="input-wrapper">
                         <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
-                        <input type="text" id="destination" value="Ranst" placeholder="Straat + huisnummer, gemeente">
+                        <input type="text" id="destination" value="Ranst" placeholder="Straat + huisnummer, gemeente" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="destinationSuggestions">
+                        <div class="autocomplete-list" id="destinationSuggestions" role="listbox" hidden></div>
                     </div>
                 </div>
 
@@ -498,9 +546,152 @@
 
         window.onload = initMap;
 
+        const selectedLocations = new WeakMap();
+
+        function setupLocationAutocomplete(inputId, listId) {
+            const input = document.getElementById(inputId);
+            const list = document.getElementById(listId);
+            let searchTimer;
+            let requestController;
+            let activeOption = -1;
+
+            function closeSuggestions() {
+                list.hidden = true;
+                list.replaceChildren();
+                input.setAttribute('aria-expanded', 'false');
+                activeOption = -1;
+            }
+
+            function selectLocation(feature) {
+                const properties = feature.properties;
+                const street = properties.street || properties.name || '';
+                const streetAddress = properties.housenumber ? `${street} ${properties.housenumber}` : street;
+                const locality = [properties.postcode, properties.city || properties.district || properties.state]
+                    .filter(Boolean)
+                    .join(' ');
+                const label = [streetAddress, locality].filter(Boolean).join(', ') || properties.name;
+
+                input.value = label;
+                selectedLocations.set(input, {
+                    lat: feature.geometry.coordinates[1],
+                    lon: feature.geometry.coordinates[0],
+                    name: label
+                });
+                closeSuggestions();
+            }
+
+            input.addEventListener('input', () => {
+                selectedLocations.delete(input);
+                clearTimeout(searchTimer);
+                if (requestController) requestController.abort();
+
+                const query = input.value.trim();
+                if (query.length < 3) {
+                    closeSuggestions();
+                    return;
+                }
+
+                list.replaceChildren();
+                const message = document.createElement('div');
+                message.className = 'autocomplete-message';
+                message.textContent = 'Adressen zoeken...';
+                list.appendChild(message);
+                list.hidden = false;
+                input.setAttribute('aria-expanded', 'true');
+
+                searchTimer = setTimeout(async () => {
+                    requestController = new AbortController();
+                    const params = new URLSearchParams({
+                        q: query,
+                        limit: '6',
+                        bbox: '2.5,49.4,6.4,51.6'
+                    });
+
+                    try {
+                        const response = await fetch(`https://photon.komoot.io/api/?${params}`, {
+                            signal: requestController.signal
+                        });
+                        if (!response.ok) throw new Error('Zoeken is tijdelijk niet beschikbaar.');
+
+                        const data = await response.json();
+                        const features = (data.features || []).filter(feature =>
+                            feature.properties.countrycode?.toLowerCase() === 'be'
+                        );
+                        list.replaceChildren();
+
+                        if (!features.length) {
+                            const emptyMessage = document.createElement('div');
+                            emptyMessage.className = 'autocomplete-message';
+                            emptyMessage.textContent = 'Geen adressen gevonden';
+                            list.appendChild(emptyMessage);
+                            return;
+                        }
+
+                        features.forEach((feature, index) => {
+                            const option = document.createElement('button');
+                            option.type = 'button';
+                            option.className = 'autocomplete-option';
+                            option.setAttribute('role', 'option');
+                            option.setAttribute('aria-selected', 'false');
+                            const properties = feature.properties;
+                            const street = properties.street || properties.name || '';
+                            const streetAddress = properties.housenumber ? `${street} ${properties.housenumber}` : street;
+                            const locality = [properties.postcode, properties.city || properties.district || properties.state]
+                                .filter(Boolean)
+                                .join(' ');
+                            option.textContent = [streetAddress, locality].filter(Boolean).join(', ') || properties.name;
+                            option.addEventListener('click', () => selectLocation(feature));
+                            list.appendChild(option);
+                        });
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            list.replaceChildren();
+                            const errorMessage = document.createElement('div');
+                            errorMessage.className = 'autocomplete-message';
+                            errorMessage.textContent = 'Adressen zoeken is tijdelijk niet beschikbaar';
+                            list.appendChild(errorMessage);
+                        }
+                    }
+                }, 400);
+            });
+
+            input.addEventListener('keydown', event => {
+                const options = [...list.querySelectorAll('[role="option"]')];
+                if (list.hidden || options.length === 0) {
+                    if (event.key === 'Escape') closeSuggestions();
+                    return;
+                }
+
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    const direction = event.key === 'ArrowDown' ? 1 : -1;
+                    activeOption = (activeOption + direction + options.length) % options.length;
+                    options.forEach((option, index) => {
+                        option.setAttribute('aria-selected', String(index === activeOption));
+                    });
+                } else if (event.key === 'Enter' && activeOption >= 0) {
+                    event.preventDefault();
+                    options[activeOption].click();
+                } else if (event.key === 'Escape') {
+                    closeSuggestions();
+                }
+            });
+
+            document.addEventListener('pointerdown', event => {
+                if (!input.parentElement.contains(event.target)) closeSuggestions();
+            });
+        }
+
+        setupLocationAutocomplete('origin', 'originSuggestions');
+        setupLocationAutocomplete('destination', 'destinationSuggestions');
+
         function setQuickRoute(from, to) {
-            document.getElementById('origin').value = from;
-            document.getElementById('destination').value = to;
+            const originInput = document.getElementById('origin');
+            const destinationInput = document.getElementById('destination');
+            originInput.value = from;
+            destinationInput.value = to;
+            selectedLocations.delete(originInput);
+            selectedLocations.delete(destinationInput);
             calculateRoute();
         }
 
@@ -521,6 +712,10 @@
             throw new Error(`Locatie '${locationName}' niet gevonden.`);
         }
 
+        async function resolveLocation(input) {
+            return selectedLocations.get(input) || geocode(input.value);
+        }
+
         async function calculateRoute() {
             const originStr = document.getElementById('origin').value;
             const destStr = document.getElementById('destination').value;
@@ -535,8 +730,8 @@
             routeLayerGroup.clearLayers();
 
             try {
-                const originCoords = await geocode(originStr);
-                const destCoords = await geocode(destStr);
+                const originCoords = await resolveLocation(document.getElementById('origin'));
+                const destCoords = await resolveLocation(document.getElementById('destination'));
 
                 // OSRM Fietsroute ophalen met volledige geometrie
                 let routeData = null;
