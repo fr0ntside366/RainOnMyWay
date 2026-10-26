@@ -864,6 +864,13 @@
                     Bereken Fietsroute & Weer
                 </button>
 
+                <div class="form-group" style="margin-top: 1rem; margin-bottom: 0;">
+                    <label for="savedRouteName">Naam opgeslagen route (optioneel)</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="savedRouteName" maxlength="80" placeholder="Bijv. woon-werkrit" autocomplete="off">
+                    </div>
+                </div>
+
                 <button class="btn-secondary" id="saveRouteButton" type="button">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
                     Bewaar deze route
@@ -1067,6 +1074,7 @@
             const destinationInput = document.getElementById('destination');
             const origin = originInput.value.trim();
             const destination = destinationInput.value.trim();
+            const routeName = document.getElementById('savedRouteName').value.trim();
             const speedKmh = Number(document.getElementById('averageSpeed').value);
             const feedback = document.getElementById('savedRouteFeedback');
 
@@ -1082,7 +1090,7 @@
 
             const route = {
                 id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                name: `${origin} → ${destination}`,
+                name: routeName || `${origin} → ${destination}`,
                 origin,
                 destination,
                 speedKmh,
@@ -1105,15 +1113,16 @@
 
             if (duplicateIndex >= 0) {
                 route.id = updatedRoutes[duplicateIndex].id;
-                route.name = updatedRoutes[duplicateIndex].name;
+                route.name = routeName || updatedRoutes[duplicateIndex].name;
                 updatedRoutes[duplicateIndex] = route;
             } else {
-                if (sameEndpoints.length > 0) route.name += ` (${sameEndpoints.length + 1})`;
+                if (!routeName && sameEndpoints.length > 0) route.name += ` (${sameEndpoints.length + 1})`;
                 updatedRoutes.unshift(route);
             }
 
             if (!persistSavedRoutes(updatedRoutes)) return;
             savedRoutes = updatedRoutes;
+            document.getElementById('savedRouteName').value = '';
             feedback.textContent = duplicateIndex >= 0 ? 'Opgeslagen route bijgewerkt.' : 'Route opgeslagen.';
             renderSavedRoutes();
         }
