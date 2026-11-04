@@ -549,19 +549,18 @@
             width: max-content;
             height: 28px;
             align-items: center;
-            gap: 0;
             padding: 0 4px;
             border: 2px solid white;
-            border-radius: 50%;
+            border-radius: 14px;
             background: rgba(15, 23, 42, 0.95);
             color: var(--wind-color);
             box-shadow: 0 2px 7px rgba(0, 0, 0, 0.55);
         }
 
         .wind-direction-arrows svg {
-            width: 14px;
-            height: 20px;
-            flex: 0 0 14px;
+            display: block;
+            height: 24px;
+            flex: 0 0 auto;
             overflow: visible;
             transform: rotate(var(--wind-angle));
         }
@@ -1797,13 +1796,15 @@
                 const windToDirection = (windFromDirection + 180) % 360;
                 const windArrowColor = getWindArrowColor(wp.windSpeed || 0);
                 const windArrowCount = getWindArrowCount(wp.windSpeed || 0);
-                const windArrows = Array.from({ length: windArrowCount }, () =>
-                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V4m-7 7 7-7 7 7"/></svg>'
-                ).join('');
+                const windArrowheads = Array.from({ length: windArrowCount }, (_, index) => {
+                    const tipX = 14 + index * 6;
+                    return `M${tipX - 4} 7 L${tipX} 12 L${tipX - 4} 17`;
+                }).join(' ');
+                const windArrowWidth = windArrowCount * 6 + 10;
                 const windArrowIcon = L.divIcon({
                     className: 'wind-direction-icon',
-                    html: `<div class="wind-direction-arrows" style="--wind-color:${windArrowColor}; --wind-angle:${windToDirection}deg" title="Wind blaast naar ${windToDirection}°, windkracht ${windArrowCount}/5">${windArrows}</div>`,
-                    iconSize: [windArrowCount * 14 + 8, 28],
+                    html: `<div class="wind-direction-arrows" style="--wind-color:${windArrowColor}; --wind-angle:${windToDirection}deg" title="Wind blaast naar ${windToDirection}°, windkracht ${windArrowCount}/5"><svg width="${windArrowWidth}" viewBox="0 0 ${windArrowWidth} 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 H10 ${windArrowheads}"/></svg></div>`,
+                    iconSize: [windArrowWidth + 12, 28],
                     iconAnchor: [-8, 14]
                 });
                 L.marker([wp.lat, wp.lon], {
