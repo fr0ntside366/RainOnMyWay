@@ -969,7 +969,6 @@
                     <div class="wind-legend-level"><span class="wind-legend-swatch" style="background:#f97316;"></span>25-39 km/u</div>
                     <div class="wind-legend-level"><span class="wind-legend-swatch" style="background:#ef4444;"></span>40+ km/u</div>
                 </div>
-                <div class="weather-source-note">Aantal pijlen: 1 (&lt;5), 2 (5-14), 3 (15-24), 4 (25-39), 5 (40+) km/u.</div>
             </div>
         </div>
     </div>
@@ -1731,14 +1730,6 @@
             return '#ef4444';
         }
 
-        function getWindArrowCount(windSpeed) {
-            if (windSpeed < 5) return 1;
-            if (windSpeed < 15) return 2;
-            if (windSpeed < 25) return 3;
-            if (windSpeed < 40) return 4;
-            return 5;
-        }
-
         function calculateWindImpact(heading, windDir, windSpeed) {
             // Windrichting is de richting waar de wind VANDAAN komt
             const relativeAngle = Math.abs((windDir - heading + 360) % 360);
@@ -1796,16 +1787,10 @@
                 const windToDirection = (windFromDirection + 180) % 360;
                 const windArrowRotation = (windToDirection + 270) % 360;
                 const windArrowColor = getWindArrowColor(wp.windSpeed || 0);
-                const windArrowCount = getWindArrowCount(wp.windSpeed || 0);
-                const windArrowheads = Array.from({ length: windArrowCount }, (_, index) => {
-                    const tipX = 14 + index * 6;
-                    return `M${tipX - 4} 7 L${tipX} 12 L${tipX - 4} 17`;
-                }).join(' ');
-                const windArrowWidth = windArrowCount * 6 + 10;
                 const windArrowIcon = L.divIcon({
                     className: 'wind-direction-icon',
-                    html: `<div class="wind-direction-arrows" style="--wind-color:${windArrowColor}; --wind-angle:${windArrowRotation}deg" title="Wind waait naar ${windToDirection}° (komt uit ${windFromDirection}°), windkracht ${windArrowCount}/5"><svg width="${windArrowWidth}" viewBox="0 0 ${windArrowWidth} 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 H10 ${windArrowheads}"/></svg></div>`,
-                    iconSize: [windArrowWidth + 10, 24],
+                    html: `<div class="wind-direction-arrows" style="--wind-color:${windArrowColor}; --wind-angle:${windArrowRotation}deg" title="Wind waait naar ${windToDirection}° (komt uit ${windFromDirection}°), ${Math.round(wp.windSpeed)} km/u"><svg width="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 H18 M12 6 L18 12 L12 18"/></svg></div>`,
+                    iconSize: [34, 24],
                     iconAnchor: [-8, 12]
                 });
                 L.marker([wp.lat, wp.lon], {
