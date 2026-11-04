@@ -547,11 +547,11 @@
         .wind-direction-arrows {
             display: flex;
             width: max-content;
-            height: 28px;
+            height: 24px;
             align-items: center;
-            padding: 0 4px;
-            border: 2px solid white;
-            border-radius: 14px;
+            padding: 0 3px;
+            border: 1.5px solid white;
+            border-radius: 12px;
             background: rgba(15, 23, 42, 0.95);
             color: var(--wind-color);
             box-shadow: 0 2px 7px rgba(0, 0, 0, 0.55);
@@ -559,7 +559,7 @@
 
         .wind-direction-arrows svg {
             display: block;
-            height: 24px;
+            height: 20px;
             flex: 0 0 auto;
             overflow: visible;
             transform: rotate(var(--wind-angle));
@@ -961,7 +961,7 @@
                 <div class="legend-item"><div class="legend-color" style="background: #1d4ed8;"></div> Matige/Zware regen</div>
                 <div class="legend-item">
                     <svg class="wind-legend-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V4m-7 7 7-7 7 7"/></svg>
-                    Richting waaruit de wind komt
+                    Richting waarin de wind waait
                 </div>
                 <div class="wind-legend-scale">
                     <div class="wind-legend-level"><span class="wind-legend-swatch" style="background:#10b981;"></span>&lt;15 km/u</div>
@@ -1657,9 +1657,9 @@
                 wp.rainSource = 'Open-Meteo';
                 const isoTime = wp.time.toISOString();
                 const dateStr = isoTime.split('T')[0];
-                const hour = wp.time.getHours();
+                const hour = wp.time.getUTCHours();
 
-                const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${wp.lat}&longitude=${wp.lon}&hourly=temperature_2m,precipitation,windspeed_10m,winddirection_10m&start_date=${dateStr}&end_date=${dateStr}&timezone=auto`;
+                const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${wp.lat}&longitude=${wp.lon}&hourly=temperature_2m,precipitation,windspeed_10m,winddirection_10m&start_date=${dateStr}&end_date=${dateStr}&timezone=GMT`;
                 
                 try {
                     const res = await fetch(weatherUrl);
@@ -1793,7 +1793,8 @@
                 const marker = L.marker([wp.lat, wp.lon], { icon: circleIcon }).addTo(routeLayerGroup);
 
                 const windFromDirection = Number.isFinite(wp.windDir) ? wp.windDir : 0;
-                const windArrowRotation = (windFromDirection + 270) % 360;
+                const windToDirection = (windFromDirection + 180) % 360;
+                const windArrowRotation = (windToDirection + 270) % 360;
                 const windArrowColor = getWindArrowColor(wp.windSpeed || 0);
                 const windArrowCount = getWindArrowCount(wp.windSpeed || 0);
                 const windArrowheads = Array.from({ length: windArrowCount }, (_, index) => {
@@ -1803,9 +1804,9 @@
                 const windArrowWidth = windArrowCount * 6 + 10;
                 const windArrowIcon = L.divIcon({
                     className: 'wind-direction-icon',
-                    html: `<div class="wind-direction-arrows" style="--wind-color:${windArrowColor}; --wind-angle:${windArrowRotation}deg" title="Wind komt uit ${windFromDirection}°, windkracht ${windArrowCount}/5"><svg width="${windArrowWidth}" viewBox="0 0 ${windArrowWidth} 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 H10 ${windArrowheads}"/></svg></div>`,
-                    iconSize: [windArrowWidth + 12, 28],
-                    iconAnchor: [-8, 14]
+                    html: `<div class="wind-direction-arrows" style="--wind-color:${windArrowColor}; --wind-angle:${windArrowRotation}deg" title="Wind waait naar ${windToDirection}° (komt uit ${windFromDirection}°), windkracht ${windArrowCount}/5"><svg width="${windArrowWidth}" viewBox="0 0 ${windArrowWidth} 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 H10 ${windArrowheads}"/></svg></div>`,
+                    iconSize: [windArrowWidth + 10, 24],
+                    iconAnchor: [-8, 12]
                 });
                 L.marker([wp.lat, wp.lon], {
                     icon: windArrowIcon,
